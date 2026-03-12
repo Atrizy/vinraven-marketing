@@ -49,18 +49,18 @@ export default function HomePage() {
                 <span className="badge bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/40 mb-4">
                   Done-for-you AI front desk
                 </span>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-100 tracking-tight leading-[1.1] mb-5">
-                  Your Website&apos;s New Front Desk. 24/7. Zero Effort.
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.1] mb-5">
+                  Your Digital Front Desk. Awake 24/7.
                 </h1>
                 <p className="text-lg text-slate-400 leading-relaxed mb-8 max-w-xl">
-                  Stop losing leads to your voicemail. We build and manage a custom AI assistant for your business that answers questions 24/7 and captures every inquiry. You get the leads; we handle the tech.
+                  VinRaven answers your customers&apos; questions instantly and captures every inquiry as a ticket. Never miss a lead again, even when you&apos;re off the clock.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <Link
                     href="#contact"
                     className="px-6 py-3.5 rounded-xl bg-[#8b5cf6] text-white font-bold text-base hover:bg-[#9d6ff7] transition-colors"
                   >
-                    Get Your Custom Demo
+                    Start Capturing Leads
                   </Link>
                   <Link
                     href="#process"

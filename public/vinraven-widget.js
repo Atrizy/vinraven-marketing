@@ -173,6 +173,8 @@
         .vr-widget-root {
           --vr-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           --vr-accent: #e8661b;
+          --vr-visual-height: 70vh;
+          --vr-widget-bottom: 100px;
           --vr-bg: rgba(8, 11, 22, 0.96);
           --vr-bg-elevated: rgba(15, 23, 42, 0.92);
           --vr-border-subtle: rgba(148,163,184,0.32);
@@ -218,12 +220,12 @@
         .vr-launcher-icon svg { width: 14px; height: 14px; }
         .vr-widget {
           position: fixed;
-          bottom: 100px;
+          bottom: var(--vr-widget-bottom, 100px);
           right: 24px;
           width: 380px;
           max-width: calc(100vw - 48px);
           height: 560px;
-          max-height: 70vh;
+          max-height: min(560px, calc(var(--vr-visual-height, 70vh) - 100px));
           display: flex;
           flex-direction: column;
           border-radius: var(--vr-radius-lg);
@@ -575,6 +577,7 @@
     document.body.appendChild(container);
     cacheElements();
     attachEventListeners();
+    setupVisualViewport();
 
     (async () => {
       state.suggestions = await fetchSuggestions();
@@ -604,6 +607,33 @@
       ticketClose: document.querySelector('.vr-ticket-close'),
       ticketSubmit: document.getElementById('vr-ticket-submit')
     };
+  }
+
+  // Resize widget when mobile keyboard opens (Visual Viewport API)
+  function setupVisualViewport() {
+    const root = document.getElementById('vinraven-widget-container');
+    if (!root) return;
+
+    function updateViewport() {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const height = vv.height;
+      const keyboardOpen = height < window.innerHeight * 0.75;
+      root.style.setProperty('--vr-visual-height', height + 'px');
+      if (keyboardOpen) {
+        const bottomPx = window.innerHeight - vv.offsetTop - vv.height + 16;
+        root.style.setProperty('--vr-widget-bottom', Math.max(16, bottomPx) + 'px');
+      } else {
+        root.style.setProperty('--vr-widget-bottom', '100px');
+      }
+    }
+
+    updateViewport();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateViewport);
+      window.visualViewport.addEventListener('scroll', updateViewport);
+    }
+    window.addEventListener('resize', updateViewport);
   }
 
   // Event listeners
