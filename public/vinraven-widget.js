@@ -309,6 +309,7 @@
           background: radial-gradient(circle at 10% 0, rgba(15,118,110,0.25), transparent 55%),
             radial-gradient(circle at 100% 100%, rgba(232,102,27,0.24), transparent 55%),
             radial-gradient(circle at 0 100%, rgba(59,130,246,0.18), transparent 55%);
+          overscroll-behavior: contain;
         }
         .vr-messages::-webkit-scrollbar {
           width: 8px;
@@ -529,6 +530,23 @@
           background: rgba(30,64,175,0.9);
           border-color: rgba(191,219,254,0.9);
         }
+
+        @media (max-width: 768px) {
+          .vr-widget {
+            bottom: 0;
+            right: 0;
+            left: 0;
+            width: 100vw;
+            max-width: 100vw;
+            height: 100svh;
+            max-height: 100svh;
+            border-radius: 0;
+          }
+          .vr-launcher {
+            bottom: 16px;
+            right: 16px;
+          }
+        }
       </style>
 
       <button id="vinraven-fab" class="vr-launcher" aria-label="Open chat">
@@ -609,36 +627,34 @@
     };
   }
 
-  // Resize widget when mobile keyboard opens (Visual Viewport API)
   function setupVisualViewport() {
-    const root = document.getElementById('vinraven-widget-container');
-    if (!root) return;
+    if (!window.visualViewport) return;
+
+    const chat = document.getElementById('vinraven-chat');
+    if (!chat) return;
 
     function updateViewport() {
       const vv = window.visualViewport;
       if (!vv) return;
-      const height = vv.height;
-      const keyboardOpen = height < window.innerHeight * 0.75;
-      root.style.setProperty('--vr-visual-height', height + 'px');
-      if (keyboardOpen) {
-        const bottomPx = window.innerHeight - vv.offsetTop - vv.height + 16;
-        root.style.setProperty('--vr-widget-bottom', Math.max(16, bottomPx) + 'px');
-      } else {
-        root.style.setProperty('--vr-widget-bottom', '100px');
-      }
+      if (window.innerWidth > 768) return; // desktop unchanged
+
+      // Lock widget to the visual viewport area
+      chat.style.position = 'fixed';
+      chat.style.top = '0px';
+      chat.style.left = '0px';
+      chat.style.right = '0px';
+      chat.style.width = '100vw';
+      chat.style.height = vv.height + 'px';
+      chat.style.maxHeight = vv.height + 'px';
     }
 
     updateViewport();
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateViewport);
-      window.visualViewport.addEventListener('scroll', updateViewport);
-    }
-    window.addEventListener('resize', updateViewport);
+    window.visualViewport.addEventListener('resize', updateViewport);
   }
 
   // Event listeners
   function attachEventListeners() {
-    const { fab, close, form, ticketSupport, ticketClose, ticketSubmit } = state.elements;
+    const { fab, close, form, ticketSupport, ticketClose, ticketSubmit, input, messages } = state.elements;
 
     fab.addEventListener('click', toggleChat);
     close.addEventListener('click', toggleChat);
@@ -646,6 +662,21 @@
     if (ticketSupport) ticketSupport.addEventListener('click', showTicketForm);
     ticketClose.addEventListener('click', () => state.elements.ticketForm.classList.add('hidden'));
     ticketSubmit.addEventListener('click', handleTicketSubmit);
+
+    if (input && messages) {
+      input.addEventListener('focus', () => {
+        try {
+          if (window.innerWidth <= 768) {
+            window.scrollTo(0, 0);
+            setTimeout(() => {
+              messages.scrollTop = messages.scrollHeight;
+            }, 0);
+          }
+        } catch (e) {
+          // ignore
+        }
+      });
+    }
   }
 
   // Chat toggle
@@ -653,6 +684,35 @@
     state.isOpen = !state.isOpen;
     state.elements.chat.classList.toggle('vr-widget--open', state.isOpen);
     state.elements.fab.querySelector('.vr-launcher-icon').innerHTML = state.isOpen ? ICONS.close : ICONS.chat;
+
+    try {
+      const eventName = state.isOpen ? 'vinraven:widget-open' : 'vinraven:widget-close';
+      window.dispatchEvent(new Event(eventName));
+    } catch (e) {
+      // ignore
+    }
+
+    // Hide floating trigger while chat is open
+    try {
+      if (state.elements.fab) {
+        state.elements.fab.style.display = state.isOpen ? 'none' : 'flex';
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Lock body scroll on mobile when open
+    try {
+      if (state.isOpen && window.innerWidth <= 768) {
+        document.body.dataset.vinravenScroll = document.body.style.overflow || '';
+        document.body.style.overflow = 'hidden';
+      } else if (!state.isOpen && document.body.dataset.vinravenScroll !== undefined) {
+        document.body.style.overflow = document.body.dataset.vinravenScroll;
+        delete document.body.dataset.vinravenScroll;
+      }
+    } catch (e) {
+      // ignore
+    }
 
     if (state.isOpen) {
       setTimeout(() => state.elements.input.focus(), 180);
@@ -668,7 +728,7 @@
         state.messageHistory = saved.history;
         renderMessages();
       } else {
-        sendMessage('hello', true);
+        addMessage('bot', 'Hello! How can I help you today?');
       }
     }
 

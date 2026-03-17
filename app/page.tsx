@@ -1,10 +1,48 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import Script from 'next/script'
+import { useState, useEffect, useRef } from 'react'
 import { FaqAccordion } from '@/components/FaqAccordion'
 import { ContactForm } from '@/components/ContactForm'
 
 export default function HomePage() {
+  const [showBubble, setShowBubble] = useState(false)
+  const [hasDismissedTooltip, setHasDismissedTooltip] = useState(false)
+  const timerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (hasDismissedTooltip) return
+    timerRef.current = window.setTimeout(() => {
+      setShowBubble(true)
+    }, 15000)
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [hasDismissedTooltip])
+
+  useEffect(() => {
+    function handleOpen() {
+      setShowBubble(false)
+      setHasDismissedTooltip(true)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+    function handleClose() {
+      setShowBubble(true)
+    }
+    window.addEventListener('vinraven:widget-open', handleOpen)
+    window.addEventListener('vinraven:widget-close', handleClose)
+    return () => {
+      window.removeEventListener('vinraven:widget-open', handleOpen)
+      window.removeEventListener('vinraven:widget-close', handleClose)
+    }
+  }, [])
+
   return (
     <>
       <div className="gradient-bg">
@@ -65,6 +103,13 @@ export default function HomePage() {
                   <Link
                     href="#process"
                     className="px-6 py-3.5 rounded-xl border border-slate-600 text-slate-200 font-semibold hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      setShowBubble(true)
+                      setHasDismissedTooltip(true)
+                      if (timerRef.current) {
+                        clearTimeout(timerRef.current)
+                      }
+                    }}
                   >
                     See how it works
                   </Link>
@@ -80,7 +125,7 @@ export default function HomePage() {
                   <div className="space-y-3">
                     <div className="flex justify-start">
                       <div className="bg-slate-800/80 rounded-2xl rounded-bl-md px-4 py-2 text-sm max-w-[80%]">
-                        Hi, I&apos;m your front desk. How can I help today?
+                        Hi, welcome to VinRaven. How can I be of assistance today?
                       </div>
                     </div>
                     <div className="flex justify-end">
@@ -288,12 +333,14 @@ export default function HomePage() {
       </div>
 
       {/* Bubble above chat widget */}
-      <div
-        className="fixed bottom-[100px] right-6 z-[999998] rounded-xl bg-[#8b5cf6] px-4 py-2.5 text-sm font-medium text-white shadow-lg"
-        style={{ boxShadow: '0 4px 14px rgba(139, 92, 246, 0.4)' }}
-      >
-        Try me here!
-      </div>
+      {showBubble && !hasDismissedTooltip && (
+        <div
+          className="fixed bottom-[100px] right-6 z-[999998] rounded-xl bg-[#8b5cf6] px-4 py-2.5 text-sm font-medium text-white shadow-lg animate-bounce"
+          style={{ boxShadow: '0 4px 14px rgba(139, 92, 246, 0.4)' }}
+        >
+          Try me here!
+        </div>
+      )}
 
       <Script
         src="/vinraven-widget.js"
