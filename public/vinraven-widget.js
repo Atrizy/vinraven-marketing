@@ -60,9 +60,9 @@
   }
 
   const FALLBACK_SUGGESTIONS = [
-    'What do you do?',
-    'How does pricing work?',
-    'How do I get started?',
+    'What are your business hours?',
+    'What services do you offer?',
+    'Where are you located?',
     'Contact support',
   ];
 
@@ -98,6 +98,7 @@
     failureCount: 0,
     elements: {},
     suggestions: null,
+    nudgeTimer: null,
   };
 
   // SVG Icons (optimized)
@@ -309,7 +310,6 @@
           background: radial-gradient(circle at 10% 0, rgba(15,118,110,0.25), transparent 55%),
             radial-gradient(circle at 100% 100%, rgba(232,102,27,0.24), transparent 55%),
             radial-gradient(circle at 0 100%, rgba(59,130,246,0.18), transparent 55%);
-          overscroll-behavior: contain;
         }
         .vr-messages::-webkit-scrollbar {
           width: 8px;
@@ -501,6 +501,15 @@
           background: color-mix(in srgb, var(--vr-accent) 20%, transparent);
           border-color: color-mix(in srgb, var(--vr-accent) 60%, transparent);
         }
+        @keyframes vr-support-nudge {
+          0%   { transform: scale(1);    background: rgba(148,163,184,0.2); border-color: rgba(148,163,184,0.4); color: var(--vr-text-main); }
+          30%  { transform: scale(1.12); background: rgba(139,92,246,0.25); border-color: rgba(139,92,246,0.8);  color: #c4b5fd; }
+          70%  { transform: scale(1.12); background: rgba(139,92,246,0.25); border-color: rgba(139,92,246,0.8);  color: #c4b5fd; }
+          100% { transform: scale(1);    background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.6);  color: #c4b5fd; }
+        }
+        .vr-support-button--nudge {
+          animation: vr-support-nudge 600ms ease-in-out forwards;
+        }
         .vr-powered-by {
           font-size: 10px;
           color: var(--vr-text-muted);
@@ -530,28 +539,52 @@
           background: rgba(30,64,175,0.9);
           border-color: rgba(191,219,254,0.9);
         }
-
-        @media (max-width: 768px) {
-          .vr-widget {
-            bottom: 0;
-            right: 0;
-            left: 0;
-            width: 100vw;
-            max-width: 100vw;
-            height: 100svh;
-            max-height: 100svh;
-            border-radius: 0;
-          }
-          .vr-launcher {
-            bottom: 16px;
-            right: 16px;
-          }
+        .vr-nudge {
+          position: fixed;
+          bottom: 90px;
+          right: 24px;
+          z-index: 999999;
+          background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+          color: #fff;
+          font-family: var(--vr-font);
+          font-size: 13px;
+          font-weight: 600;
+          padding: 8px 16px;
+          border-radius: 12px;
+          box-shadow: 0 6px 20px rgba(139,92,246,0.45);
+          pointer-events: none;
+          opacity: 0;
+          transform: translateY(6px);
+          transition: opacity 300ms ease-out, transform 300ms ease-out;
+          white-space: nowrap;
+        }
+        .vr-nudge::after {
+          content: '';
+          position: absolute;
+          bottom: -6px;
+          right: 24px;
+          width: 12px;
+          height: 12px;
+          background: #6d28d9;
+          transform: rotate(45deg);
+          border-radius: 2px;
+        }
+        .vr-nudge--visible {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+          animation: vr-nudge-bounce 2s ease-in-out infinite;
+        }
+        @keyframes vr-nudge-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
         }
       </style>
 
       <button id="vinraven-fab" class="vr-launcher" aria-label="Open chat">
         <span class="vr-launcher-icon">${ICONS.chat}</span>
       </button>
+      <div id="vr-nudge" class="vr-nudge">Try me here!</div>
 
       <div id="vinraven-chat" class="vr-widget">
         <div class="vr-header">
@@ -582,7 +615,7 @@
             <button type="submit" id="vinraven-send" class="vr-send-btn" aria-label="Send message">${ICONS.send}</button>
           </form>
         </div>
-        ${CONFIG.hideBranding ? '' : '<div class="vr-powered-by">Powered by <a href="https://vinraven.com" target="_blank" rel="noopener">VinRaven</a></div>'}
+        ${CONFIG.hideBranding ? '' : '<div class="vr-powered-by">Powered by <a href="https://vinraven.ca" target="_blank" rel="noopener">VinRaven</a></div>'}
       </div>
     `;
 
@@ -596,15 +629,6 @@
     cacheElements();
     attachEventListeners();
     setupVisualViewport();
-
-    (async () => {
-      state.suggestions = await fetchSuggestions();
-      if (CONFIG.debug) {
-        console.log(
-          `VinRaven widget: client_id=${CONFIG.clientId}, api_url=${CONFIG.apiUrl}, has_kb_suggestions=${(state.suggestions && state.suggestions.length > 0)}`,
-        );
-      }
-    })();
   }
 
   // Cache DOM elements
@@ -623,38 +647,68 @@
       ticketMessage: document.getElementById('vr-ticket-message'),
       ticketSupport: document.getElementById('vr-support-button'),
       ticketClose: document.querySelector('.vr-ticket-close'),
-      ticketSubmit: document.getElementById('vr-ticket-submit')
+      ticketSubmit: document.getElementById('vr-ticket-submit'),
+      nudge: document.getElementById('vr-nudge')
     };
   }
 
-  function setupVisualViewport() {
-    if (!window.visualViewport) return;
+  function pulseContactSupport() {
+    const btn = state.elements.ticketSupport;
+    if (!btn) return;
+    btn.classList.remove('vr-support-button--nudge');
+    void btn.offsetWidth;
+    btn.classList.add('vr-support-button--nudge');
+  }
 
-    const chat = document.getElementById('vinraven-chat');
-    if (!chat) return;
+  function dismissNudge() {
+    if (state.elements.nudge) {
+      state.elements.nudge.classList.remove('vr-nudge--visible');
+      state.elements.nudge.style.display = 'none';
+    }
+    if (state.nudgeTimer) {
+      clearTimeout(state.nudgeTimer);
+      state.nudgeTimer = null;
+    }
+  }
+
+  function scheduleNudge() {
+    state.nudgeTimer = setTimeout(() => {
+      if (!state.isOpen && state.elements.nudge) {
+        state.elements.nudge.classList.add('vr-nudge--visible');
+      }
+    }, 15000);
+  }
+
+  // Resize widget when mobile keyboard opens (Visual Viewport API)
+  function setupVisualViewport() {
+    const root = document.getElementById('vinraven-widget-container');
+    if (!root) return;
 
     function updateViewport() {
       const vv = window.visualViewport;
       if (!vv) return;
-      if (window.innerWidth > 768) return; // desktop unchanged
-
-      // Lock widget to the visual viewport area
-      chat.style.position = 'fixed';
-      chat.style.top = '0px';
-      chat.style.left = '0px';
-      chat.style.right = '0px';
-      chat.style.width = '100vw';
-      chat.style.height = vv.height + 'px';
-      chat.style.maxHeight = vv.height + 'px';
+      const height = vv.height;
+      const keyboardOpen = height < window.innerHeight * 0.75;
+      root.style.setProperty('--vr-visual-height', height + 'px');
+      if (keyboardOpen) {
+        const bottomPx = window.innerHeight - vv.offsetTop - vv.height + 16;
+        root.style.setProperty('--vr-widget-bottom', Math.max(16, bottomPx) + 'px');
+      } else {
+        root.style.setProperty('--vr-widget-bottom', '100px');
+      }
     }
 
     updateViewport();
-    window.visualViewport.addEventListener('resize', updateViewport);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateViewport);
+      window.visualViewport.addEventListener('scroll', updateViewport);
+    }
+    window.addEventListener('resize', updateViewport);
   }
 
   // Event listeners
   function attachEventListeners() {
-    const { fab, close, form, ticketSupport, ticketClose, ticketSubmit, input, messages } = state.elements;
+    const { fab, close, form, ticketSupport, ticketClose, ticketSubmit } = state.elements;
 
     fab.addEventListener('click', toggleChat);
     close.addEventListener('click', toggleChat);
@@ -663,20 +717,7 @@
     ticketClose.addEventListener('click', () => state.elements.ticketForm.classList.add('hidden'));
     ticketSubmit.addEventListener('click', handleTicketSubmit);
 
-    if (input && messages) {
-      input.addEventListener('focus', () => {
-        try {
-          if (window.innerWidth <= 768) {
-            window.scrollTo(0, 0);
-            setTimeout(() => {
-              messages.scrollTop = messages.scrollHeight;
-            }, 0);
-          }
-        } catch (e) {
-          // ignore
-        }
-      });
-    }
+    scheduleNudge();
   }
 
   // Chat toggle
@@ -685,34 +726,7 @@
     state.elements.chat.classList.toggle('vr-widget--open', state.isOpen);
     state.elements.fab.querySelector('.vr-launcher-icon').innerHTML = state.isOpen ? ICONS.close : ICONS.chat;
 
-    try {
-      const eventName = state.isOpen ? 'vinraven:widget-open' : 'vinraven:widget-close';
-      window.dispatchEvent(new Event(eventName));
-    } catch (e) {
-      // ignore
-    }
-
-    // Hide floating trigger while chat is open
-    try {
-      if (state.elements.fab) {
-        state.elements.fab.style.display = state.isOpen ? 'none' : 'flex';
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    // Lock body scroll on mobile when open
-    try {
-      if (state.isOpen && window.innerWidth <= 768) {
-        document.body.dataset.vinravenScroll = document.body.style.overflow || '';
-        document.body.style.overflow = 'hidden';
-      } else if (!state.isOpen && document.body.dataset.vinravenScroll !== undefined) {
-        document.body.style.overflow = document.body.dataset.vinravenScroll;
-        delete document.body.dataset.vinravenScroll;
-      }
-    } catch (e) {
-      // ignore
-    }
+    dismissNudge();
 
     if (state.isOpen) {
       setTimeout(() => state.elements.input.focus(), 180);
@@ -728,7 +742,7 @@
         state.messageHistory = saved.history;
         renderMessages();
       } else {
-        addMessage('bot', 'Hello! How can I help you today?');
+        addMessage('bot', 'Hi! What can I help you with today?');
       }
     }
 
@@ -785,10 +799,27 @@
       const followUps = Array.isArray(data.follow_ups)
         ? data.follow_ups.filter((s) => typeof s === 'string' && s.trim().length > 0)
         : [];
+
+      if (!state.suggestions) {
+        fetchSuggestions().then((s) => { state.suggestions = s; });
+      }
+
       const chips = followUps.length > 0 ? followUps : (state.suggestions && state.suggestions.length > 0 ? state.suggestions : FALLBACK_SUGGESTIONS).slice(0, 4);
 
       addMessage('bot', data.response, null);
-      renderFollowUps(chips);
+
+      const mentionsSupport = typeof data.response === 'string' &&
+        data.response.toLowerCase().includes('contact support');
+
+      if (data.needs_ticket || mentionsSupport) {
+        pulseContactSupport();
+      }
+
+      if (data.needs_ticket) {
+        showTicketForm();
+      } else {
+        renderFollowUps(chips);
+      }
 
       if (PERSIST_HISTORY) utils.saveConversation();
 
