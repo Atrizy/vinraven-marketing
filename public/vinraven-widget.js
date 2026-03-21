@@ -579,6 +579,28 @@
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-5px); }
         }
+        @media (max-width: 768px) {
+          .vr-widget {
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            border-radius: 0;
+            transform-origin: bottom center;
+          }
+          .vr-launcher {
+            bottom: 20px;
+            right: 20px;
+          }
+          .vr-nudge {
+            bottom: 90px;
+            right: 20px;
+          }
+        }
       </style>
 
       <button id="vinraven-fab" class="vr-launcher" aria-label="Open chat">
@@ -718,6 +740,18 @@
     ticketSubmit.addEventListener('click', handleTicketSubmit);
 
     scheduleNudge();
+
+    // iOS Safari: visual viewport shrinks when keyboard opens — dvh doesn't update.
+    // Manually clamp chat height to the visible viewport height.
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) {
+          const chat = state.elements.chat;
+          chat.style.height = window.visualViewport.height + 'px';
+          chat.style.top = window.visualViewport.offsetTop + 'px';
+        }
+      });
+    }
   }
 
   // Chat toggle

@@ -276,7 +276,7 @@ export default function HomePage() {
                 <nav className="flex flex-wrap justify-center gap-6 text-sm">
                   <a href="#pricing" className="text-slate-500 hover:text-slate-300">Pricing</a>
                   <a href="#process" className="text-slate-500 hover:text-slate-300">How it works</a>
-                  <a href="mailto:support@vinraven.com" className="text-slate-500 hover:text-slate-300">Contact</a>
+                  <a href="mailto:hello@vinraven.ca" className="text-slate-500 hover:text-slate-300">Contact</a>
                   <a href="/privacy" className="text-slate-500 hover:text-slate-300">Privacy</a>
                   <a href="/terms" className="text-slate-500 hover:text-slate-300">Terms</a>
                 </nav>
