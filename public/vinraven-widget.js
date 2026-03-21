@@ -34,6 +34,7 @@
 
   const CONFIG = {
     clientId: currentScript?.getAttribute('data-client-id') || 'demo-client',
+    businessName: currentScript?.getAttribute('data-business-name')?.trim() || 'Us',
     apiUrl,
     apiKey,
     primaryColor: currentScript?.getAttribute('data-color') || null,
@@ -610,10 +611,10 @@
 
       <div id="vinraven-chat" class="vr-widget">
         <div class="vr-header">
-          <div class="vr-avatar">${CONFIG.logoUrl ? `<img src="${String(CONFIG.logoUrl).replace(/"/g, '&quot;')}" alt="VinRaven" onerror="this.style.display='none';var n=this.nextElementSibling;if(n)n.style.display='flex'" /><span class="vr-avatar-fallback" style="display:none;align-items:center;justify-content:center">${ICONS.raven}</span>` : ICONS.raven}</div>
+          <div class="vr-avatar">${CONFIG.logoUrl ? `<img src="${String(CONFIG.logoUrl).replace(/"/g, '&quot;')}" alt="${String(CONFIG.businessName).replace(/"/g, '&quot;')}" onerror="this.style.display='none';var n=this.nextElementSibling;if(n)n.style.display='flex'" /><span class="vr-avatar-fallback" style="display:none;align-items:center;justify-content:center">${ICONS.raven}</span>` : ICONS.raven}</div>
           <div class="vr-header-text">
             <div class="vr-title">Chat with us</div>
-            <div class="vr-subtitle">VinRaven</div>
+            <div class="vr-subtitle">${String(CONFIG.businessName).replace(/</g, '&lt;')}</div>
             <span class="vr-status-pill"><span class="vr-status-dot"></span> Online</span>
           </div>
           <button id="vr-support-button" class="vr-support-button">Contact support</button>
@@ -896,7 +897,7 @@
     const row1 = document.createElement('div');
     row1.className = `vr-message-row vr-message-row--${sender} vr-message-enter`;
     let html = `<div class="vr-message ${bubbleClass}">${utils.formatMarkdown(utils.escapeHtml(text))}`;
-    if (isBot) html += '<div class="vr-message-meta">VinRaven</div>';
+    if (isBot) html += `<div class="vr-message-meta">${String(CONFIG.businessName).replace(/</g, '&lt;')}</div>`;
     html += '</div>';
     row1.innerHTML = html;
     frag.appendChild(row1);

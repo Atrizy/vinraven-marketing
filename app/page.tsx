@@ -292,7 +292,8 @@ export default function HomePage() {
         strategy="afterInteractive"
         data-api-url={process.env.NEXT_PUBLIC_VINRAVEN_API_URL ?? 'http://localhost:8000'}
         data-api-key={process.env.NEXT_PUBLIC_VINRAVEN_API_KEY ?? 'REPLACE_ME_DEV_KEY'}
-        data-client-id="computer_shack"
+        data-client-id="vinraven"
+        data-business-name="VinRaven"
         data-color="#8b5cf6"
       />
     </>
