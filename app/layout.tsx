@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'VinRaven – Your Website’s 24/7 AI Front Desk',
   description:
     'Done-for-you AI assistant that answers questions 24/7 and captures every lead. Stop losing customers to voicemail. We handle the tech; you get the leads.',
+  icons: { icon: '/vinraven.png', apple: '/vinraven.png' },
 }
 
 export default function RootLayout({

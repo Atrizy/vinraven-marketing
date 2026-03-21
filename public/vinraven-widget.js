@@ -67,29 +67,6 @@
     'Contact support',
   ];
 
-  async function fetchSuggestions() {
-    try {
-      const url = `${CONFIG.apiUrl.replace(/\/+$/, '')}/kb/suggestions/${encodeURIComponent(CONFIG.clientId)}`;
-      const res = await fetchWithTimeout(
-        url,
-        { method: 'GET', headers: getHeaders() },
-        15000,
-      );
-      if (!res.ok) return [];
-      const data = await res.json().catch(() => null);
-      if (!data || !Array.isArray(data.suggestions)) return [];
-      const list = data.suggestions
-        .map((s) => (typeof s === 'string' ? s.trim() : ''))
-        .filter(Boolean)
-        .slice(0, 5);
-      const hasContact = list.some((s) => s.toLowerCase() === 'contact support');
-      return list.length > 0 ? (hasContact ? list : [...list, 'Contact support']) : [];
-    } catch (e) {
-      console.error('[VinRaven] suggestions error', e);
-      return [];
-    }
-  }
-
   // State management
   const state = {
     isOpen: false,
@@ -98,7 +75,6 @@
     isSending: false,
     failureCount: 0,
     elements: {},
-    suggestions: null,
     nudgeTimer: null,
   };
 
@@ -854,11 +830,7 @@
         ? data.follow_ups.filter((s) => typeof s === 'string' && s.trim().length > 0)
         : [];
 
-      if (!state.suggestions) {
-        fetchSuggestions().then((s) => { state.suggestions = s; });
-      }
-
-      const chips = followUps.length > 0 ? followUps : (state.suggestions && state.suggestions.length > 0 ? state.suggestions : FALLBACK_SUGGESTIONS).slice(0, 4);
+      const chips = followUps.length > 0 ? followUps : FALLBACK_SUGGESTIONS.slice(0, 4);
 
       addMessage('bot', data.response, null);
 
