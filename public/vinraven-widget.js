@@ -445,9 +445,24 @@
         .vr-send-btn svg { width: 14px; height: 14px; }
         .vr-ticket-form,
         #vinraven-ticket-form {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
           padding: 16px;
+          background: var(--vr-bg);
           border-top: 1px solid var(--vr-border-subtle);
-          background: linear-gradient(to top, var(--vr-bg), var(--vr-bg-elevated));
+          border-radius: 0 0 var(--vr-radius-lg) var(--vr-radius-lg);
+          z-index: 10;
+          opacity: 0;
+          transform: translateY(12px);
+          pointer-events: none;
+          transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+        #vinraven-ticket-form.vr-ticket-visible {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
         }
         #vinraven-ticket-form.hidden { display: none; }
         #vinraven-ticket-form h4 { font-size: 14px; margin-bottom: 12px; color: var(--vr-text-main); }
@@ -737,7 +752,11 @@
     close.addEventListener('click', toggleChat);
     form.addEventListener('submit', handleSendMessage);
     if (ticketSupport) ticketSupport.addEventListener('click', showTicketForm);
-    ticketClose.addEventListener('click', () => state.elements.ticketForm.classList.add('hidden'));
+    ticketClose.addEventListener('click', () => {
+      const form = state.elements.ticketForm;
+      form.classList.remove('vr-ticket-visible');
+      setTimeout(() => form.classList.add('hidden'), 220);
+    });
     ticketSubmit.addEventListener('click', handleTicketSubmit);
 
     scheduleNudge();
@@ -991,7 +1010,10 @@
   // Ticket form
   function showTicketForm() {
     if (state.elements.ticketError) state.elements.ticketError.textContent = '';
-    state.elements.ticketForm.classList.remove('hidden');
+    const form = state.elements.ticketForm;
+    form.classList.remove('hidden');
+    void form.offsetWidth;
+    form.classList.add('vr-ticket-visible');
   }
 
   async function handleTicketSubmit() {
@@ -1021,7 +1043,9 @@
 
       if (!response.ok) throw new Error('Request failed');
 
-      state.elements.ticketForm.classList.add('hidden');
+      const form = state.elements.ticketForm;
+      form.classList.remove('vr-ticket-visible');
+      setTimeout(() => form.classList.add('hidden'), 220);
       addMessage('bot', 'Thanks! We received your message and will get back to you soon.');
     } catch (error) {
       ticketError.textContent = 'Failed to send. Please check your internet connection and try again.';
